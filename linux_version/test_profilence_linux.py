@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 import unittest
 import requests
 
@@ -13,11 +14,12 @@ class TestProfilenceSite(unittest.TestCase):
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--log-level=3")
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         chrome_prefs = {}
         options.experimental_options["prefs"] = chrome_prefs
         chrome_prefs["profile.default_content_settings"] = {"images": 2}
-        self.driver = webdriver.Chrome(options=options)
+        self.driver = webdriver.Chrome(service=Service("/chromedriver"), options=options)
         self.home = "https://www.profilence.com/"
 
     # @unittest.skip("skip")
@@ -30,6 +32,7 @@ class TestProfilenceSite(unittest.TestCase):
         links = [elem.get_attribute('href') for elem in nav_links]  # get all links to a list
         for item in links:
             status_code = requests.head(item).status_code  # get status code of link
+            # print(f"{item}, {status_code}") # added mainly for some extra console output in jenkins
             self.assertEqual(200, status_code,
                              msg=f"{item} returned {status_code} instead of 200")
 
@@ -71,10 +74,10 @@ class TestProfilenceSite(unittest.TestCase):
         contact = paragraphs[1].get_attribute('innerHTML')
         self.assertIn('mailto:contact@profilence.com', contact)
         self.assertIn('@profilence.com', contact)
-        
+
     # @unittest.skip("skip")
     def test_form(self):
-        """check that form in 'contact us' has appropriate number of fields and buttons(1)"""
+        """test that form in 'contact us' has appropriate number of fields and buttons(1)"""
         driver = self.driver
         driver.get('https://www.profilence.com/contact-us/')
         # assumes that the tested form is only form in main, likely an issue
@@ -84,19 +87,20 @@ class TestProfilenceSite(unittest.TestCase):
         # check that there's exactly one button in form
         button = form.find_elements(By.TAG_NAME, 'button')
         self.assertEqual(1, len(button))
-        
-    #@unittest.skip("skip")
+
+    # @unittest.skip("skip")
     def test_article_link_status_codes(self):
         """test that request to article links return status code 200"""
-        
+
         driver = self.driver
         driver.get('https://www.profilence.com/news/')
         news_links = driver.find_element(By.TAG_NAME, 'main').find_elements(By.TAG_NAME, 'a')
         links = [elem.get_attribute('href') for elem in news_links]
         for item in links:
             status_code = requests.head(item).status_code  # get status code of link
+            # print(f"{item}, {status_code}")
             self.assertEqual(200, status_code,
-                             msg=f"{item} returned {status_code} instead of 200")      
+                             msg=f"{item} returned {status_code} instead of 200")
 
     def tearDown(self):
         self.driver.close()
